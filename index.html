@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ave - Future of Logistics</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Courier New', monospace;
+            background-color: white;
+            color: #333;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 2px solid #333;
+        }
+
+        .game-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background-color: white;
+            margin: 20px auto;
+            width: 80%;
+            max-width: 600px;
+            height: 200px;
+            border: 2px solid #333;
+        }
+
+        #pigeon {
+            position: absolute;
+            left: 50px;
+            bottom: 0;
+            width: 60px;
+            height: 60px;
+        }
+
+        #pigeon svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .wing {
+            transform-origin: center;
+            animation: wingFlap 0.5s infinite;
+        }
+
+        @keyframes wingFlap {
+            0%, 100% { transform: rotate(0deg); }
+            50% { transform: rotate(-10deg); }
+        }
+
+        .obstacle {
+            position: absolute;
+            bottom: 0;
+            width: 20px;
+            height: 40px;
+            background-color: #333;
+        }
+
+        .content {
+            text-align: center;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .score {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+        }
+
+        .game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            font-size: 24px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background-color: #333;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+        }
+
+        button:hover {
+            background-color: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Ave</h1>
+        <p>Revolutionizing Logistics Through Technology</p>
+    </div>
+
+    <div class="game-container">
+        <div id="pigeon">
+            <svg viewBox="0 0 100 100" fill="#000">
+                <path d="M15,50 Q25,20 50,20 Q75,20 85,50 Q75,80 50,80 Q25,80 15,50 Z" />
+                <path fill="#fff" d="M35,35 Q37,33 39,35 Q41,37 39,39 Q37,41 35,39 Q33,37 35,35 Z" />
+                <path d="M45,45 L55,45 Q50,50 45,45 Z" />
+                <path class="wing" d="M20,50 Q35,40 35,55 Q25,60 20,50 Z" />
+                <path d="M45,80 L45,90 M55,80 L55,90" stroke="#000" stroke-width="2" />
+            </svg>
+        </div>
+        <div class="score">Score: <span id="scoreValue">0</span></div>
+        <div class="game-over" id="gameOver">
+            Game Over<br>
+            <button onclick="resetGame()">Try Again</button>
+        </div>
+    </div>
+
+    <div class="content">
+        <h2>Welcome to Ave</h2>
+        <p>Press SPACE to jump and avoid obstacles. Just like our logistics solutions, timing is everything.</p>
+        <button onclick="startGame()">Start Game</button>
+        <p>We're bringing innovation to logistics technology.</p>
+        <p>Contact us: hello@ave.tech</p>
+    </div>
+
+    <script>
+        let isJumping = false;
+        let score = 0;
+        let gameActive = false;
+        let obstacles = [];
+        const pigeon = document.getElementById('pigeon');
+        const gameContainer = document.querySelector('.game-container');
+        const scoreElement = document.getElementById('scoreValue');
+        const gameOverElement = document.getElementById('gameOver');
+
+        function jump() {
+            if (!isJumping && gameActive) {
+                isJumping = true;
+                let position = 0;
+                let upInterval = setInterval(() => {
+                    if (position >= 100) {
+                        clearInterval(upInterval);
+                        let downInterval = setInterval(() => {
+                            if (position <= 0) {
+                                clearInterval(downInterval);
+                                isJumping = false;
+                            }
+                            position -= 3;
+                            pigeon.style.bottom = position + 'px';
+                        }, 20);
+                    }
+                    position += 3;
+                    pigeon.style.bottom = position + 'px';
+                }, 20);
+            }
+        }
+
+        function createObstacle() {
+            if (!gameActive) return;
+            
+            const obstacle = document.createElement('div');
+            obstacle.classList.add('obstacle');
+            obstacle.style.left = '600px';
+            gameContainer.appendChild(obstacle);
+            obstacles.push(obstacle);
+
+            let position = 600;
+            let obstacleInterval = setInterval(() => {
+                if (position < -20) {
+                    clearInterval(obstacleInterval);
+                    gameContainer.removeChild(obstacle);
+                    obstacles = obstacles.filter(obs => obs !== obstacle);
+                    score++;
+                    scoreElement.textContent = score;
+                } else if (!gameActive) {
+                    clearInterval(obstacleInterval);
+                } else {
+                    position -= 5;
+                    obstacle.style.left = position + 'px';
+                    checkCollision(obstacle);
+                }
+            }, 20);
+        }
+
+        function checkCollision(obstacle) {
+            const pigeonRect = pigeon.getBoundingClientRect();
+            const obstacleRect = obstacle.getBoundingClientRect();
+
+            if (
+                pigeonRect.right > obstacleRect.left &&
+                pigeonRect.left < obstacleRect.right &&
+                pigeonRect.bottom > obstacleRect.top
+            ) {
+                endGame();
+            }
+        }
+
+        function startGame() {
+            if (!gameActive) {
+                gameActive = true;
+                score = 0;
+                scoreElement.textContent = score;
+                gameOverElement.style.display = 'none';
+                obstacles.forEach(obstacle => gameContainer.removeChild(obstacle));
+                obstacles = [];
+                setInterval(createObstacle, 2000);
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            gameOverElement.style.display = 'block';
+        }
+
+        function resetGame() {
+            pigeon.style.bottom = '0px';
+            startGame();
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.code === 'Space') {
+                event.preventDefault();
+                jump();
+            }
+        });
+    </script>
+</body>
+</html>
